@@ -16,7 +16,7 @@ namespace DomainAbstractions
     {
         // Public fields and properties
         public string InstanceName = "Default";
-        public UIElement Render { get; set; } = new Rectangle() { Width = 50, Height = 50, Fill = Brushes.Black };
+        public UIElement Render { get; set; } = new Rectangle() { Width = 25, Height = 25, Fill = Brushes.Black };
 
         public Point Position
         {

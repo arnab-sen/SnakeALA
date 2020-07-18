@@ -35,6 +35,7 @@ namespace Application
             Data<object> id_14180dadcc5a42299b907ebbe26ecaa5 = new Data<object>() { InstanceName = "Default", storedData = "U" as object };
             DataFlowConnector<Canvas> mainCanvas = new DataFlowConnector<Canvas>() { InstanceName = "mainCanvas" };
             DataFlowConnector<object> id_7cc2c7f3a9ba465b917ab80eca883d09 = new DataFlowConnector<object>() { InstanceName = "Default" };
+            DataFlowConnector<object> scalar = new DataFlowConnector<object>() { InstanceName = "scalar", Data = 25 };
             DataFlowConnector<object> snakeDirection = new DataFlowConnector<object>() { InstanceName = "snakeDirection" };
             EventConnector id_3babe233bb07413086c85807fcc6fff4 = new EventConnector() { InstanceName = "Default" };
             GameScreen id_568c58e3544e4ba1a0d1f0ad64eb4672 = new GameScreen() { InstanceName = "Default" };
@@ -44,9 +45,9 @@ namespace Application
             MovingRender id_5949b1f2856d46deb2148d18073dda8b = new MovingRender() { InstanceName = "Default" };
             MovingRender id_6c4b8472494b40aa99f9f2754a5a3a10 = new MovingRender() { InstanceName = "Default" };
             MovingRender snakeHead = new MovingRender() { InstanceName = "snakeHead", Position = new Point(500,500) };
-            Operation<object> moveSnake = new Operation<object>() { InstanceName = "moveSnake", Lambda = ops => {var direction = ops[0] as string; var vertScalar = 50; var horizScalar = 50; if (direction == "U") { return new Vector(0,-vertScalar);} else if (direction == "D") { return new Vector(0,vertScalar);} else if (direction == "L") {return new Vector(-horizScalar,0);} else if (direction == "R") {return new Vector(horizScalar,0);} else { return new Vector(0,0);}} };
+            Operation<object> moveSnake = new Operation<object>() { InstanceName = "moveSnake", Lambda = ops => {var direction = ops[0] as string; var vertScalar = (int)ops[1]; var horizScalar = (int)ops[1]; if (direction == "U") { return new Vector(0,-vertScalar);} else if (direction == "D") { return new Vector(0,vertScalar);} else if (direction == "L") {return new Vector(-horizScalar,0);} else if (direction == "R") {return new Vector(horizScalar,0);} else { return new Vector(0,0);}} };
             Operation<object> validateMovementDirection = new Operation<object>() { InstanceName = "validateMovementDirection", Lambda = ops => {var _set = new HashSet<string> {"U","D","L","R"}; if (_set.Contains(ops[0] as string)) {return ops[0];} else { return ops[1]; } } };
-            Timer gameTimer = new Timer() { InstanceName = "gameTimer", Interval = 1.0 / 15 };
+            Timer gameTimer = new Timer() { InstanceName = "gameTimer", Interval = 1.0 / 30 };
             // END AUTO-GENERATED INSTANTIATIONS FOR SnakeALA.xmind
 
             // BEGIN AUTO-GENERATED WIRING FOR SnakeALA.xmind
@@ -73,6 +74,7 @@ namespace Application
             id_3babe233bb07413086c85807fcc6fff4.WireTo(id_14180dadcc5a42299b907ebbe26ecaa5, "fanoutList"); // (EventConnector (id_3babe233bb07413086c85807fcc6fff4).fanoutList) -- [IEvent] --> (Data<object> (id_14180dadcc5a42299b907ebbe26ecaa5).start)
             gameTimer.WireTo(moveSnake, "tickHappened"); // (Timer (gameTimer).tickHappened) -- [IEvent] --> (Operation<object> (moveSnake).startOperation)
             moveSnake.WireTo(snakeDirection, "operands"); // (Operation<object> (moveSnake).operands) -- [IDataFlowB<object>] --> (@DataFlowConnector<object> (snakeDirection).outputsB)
+            moveSnake.WireTo(scalar, "operands"); // (Operation<object> (moveSnake).operands) -- [IDataFlowB<object>] --> (DataFlowConnector<object> (scalar).outputsB)
             moveSnake.WireTo(id_eee7d6d4227a44d096d1f1f1dbc62fee, "operationResultOutput"); // (Operation<object> (moveSnake).operationResultOutput) -- [IDataFlow<object>] --> (Cast<object,Vector> (id_eee7d6d4227a44d096d1f1f1dbc62fee).input)
             id_eee7d6d4227a44d096d1f1f1dbc62fee.WireTo(snakeHead, "output"); // (Cast<object,Vector> (id_eee7d6d4227a44d096d1f1f1dbc62fee).output) -- [IDataFlow<Vector>] --> (MovingRender (snakeHead).offsetPosition)
             id_14180dadcc5a42299b907ebbe26ecaa5.WireTo(snakeDirection, "dataOutput"); // (Data<object> (id_14180dadcc5a42299b907ebbe26ecaa5).dataOutput) -- [IDataFlow<object>] --> (DataFlowConnector<object> (snakeDirection).input)
