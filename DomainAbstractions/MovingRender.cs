@@ -37,6 +37,7 @@ namespace DomainAbstractions
 
         // Ports
         private IDataFlow<Point> lastPositionOutput;
+        private IDataFlow<MovingRender> selfOutput;
 
         public MovingRender()
         {
@@ -51,7 +52,6 @@ namespace DomainAbstractions
             {
                 mainCanvas = value;
 
-
                 if (!mainCanvas.Children.Contains(Render)) mainCanvas.Children.Add(Render);
             }
         }
@@ -63,7 +63,10 @@ namespace DomainAbstractions
             get => Position;
             set
             {
-                if (lastPositionOutput != null) lastPositionOutput.Data = Position;
+                if (lastPositionOutput != null)
+                {
+                    lastPositionOutput.Data = Position;
+                }
 
                 Position = value;
             }
