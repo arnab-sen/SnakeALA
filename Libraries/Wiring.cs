@@ -1,10 +1,11 @@
-﻿using System;
+﻿﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.IO;
 
-namespace Libraries
+namespace GALADE.Libraries
 {
     public static class Wiring
     {
@@ -13,7 +14,8 @@ namespace Libraries
         public delegate void OutputDelegate(string output);
 
         private static string firstPortName;
-        private static event InitializeDelegate Initialize;
+        private static event InitializeDelegate PostWiring;
+        private static event InitializeDelegate OnWiring;
         public static event OutputDelegate Output;
 
         /// <summary>
@@ -99,14 +101,13 @@ namespace Libraries
                     {
                         if (wiredSomething)
                         {
-                            // string exceptionMessage = multiportExceptionMessage + "\n" + Logging.WriteToWiringLog(A, B, AfieldInfo, save: false);
+                            string exceptionMessage = multiportExceptionMessage;
                             // throw new Exception(exceptionMessage);
                         }
 
                         AfieldInfo.SetValue(A, B);  // do the wiring
                         wiredSomething = true;
                         WriteLine($"{A.GetType().Name}[{AinstanceName}].{AfieldInfo.Name} wired to {BType.Name}[{BinstanceName}]");
-                        // Logging.WriteToWiringLog(A, B, AfieldInfo);
                     }
                     continue;  // could be more than one interface to wire
                 }
@@ -138,8 +139,8 @@ namespace Libraries
                             if (wiredSomething)
                             {
 
-                                // string exceptionMessage = multiportExceptionMessage + "\n" + Logging.WriteToWiringLog(A, B, AListFieldValue, save: false);
-                                // throw new Exception(exceptionMessage);
+                                string exceptionMessage = multiportExceptionMessage;
+                                throw new Exception(exceptionMessage);
                             }
 
                             AlistFieldInfo.SetValue(A, AListFieldValue);
@@ -148,41 +149,52 @@ namespace Libraries
                         AListFieldValue.GetType().GetMethod("Add").Invoke(AListFieldValue, new[] { B });
                         wiredSomething = true;
                         WriteLine($"{A.GetType().Name}[{AinstanceName}].{AlistFieldInfo.Name} wired to {BType.Name}[{BinstanceName}]");
-                        // Logging.WriteToWiringLog(A, B, AlistFieldInfo);
                         break;
                     }
 
                 }
             }
 
-            // Logging.WriteToWiringLog();
 
             if (!reverse && !wiredSomething)
             {
                 if (APortName != null)
                 {
                     // a specific port was specified so see if the port was already wired
-                    var AfieldInfo = AfieldInfos.FirstOrDefault();
-                    if (AfieldInfo?.GetValue(A) != null) throw new Exception($"Port already wired {A.GetType().Name}[{AinstanceName}].{APortName} to {BType.Name}[{BinstanceName}]");
+                    var value = AfieldInfos.FirstOrDefault()?.GetValue(A);
+                    if (value != null && !(value is IList))
+                    {
+                        throw new Exception($"Port already wired {A.GetType().Name}[{AinstanceName}].{APortName} to {BType.Name}[{BinstanceName}]");
+                    }
                 }
                 //throw new Exception($"Failed to wire {A.GetType().Name}[{AinstanceName}].{APortName} to {BType.Name}[{BinstanceName}]");
             }
 
-            var method = A.GetType().GetMethod("PostWiringInitialize", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (method != null)
+            var postWiringMethod = A.GetType().GetMethod("PostWiringInitialize", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (postWiringMethod != null)
             {
-                InitializeDelegate handler = (InitializeDelegate)Delegate.CreateDelegate(typeof(InitializeDelegate), A, method);
-                Initialize -= handler;  // instances can be wired to/from more than once, so only register their PostWiringInitialize once
-                Initialize += handler;
+                InitializeDelegate handler = (InitializeDelegate)Delegate.CreateDelegate(typeof(InitializeDelegate), A, postWiringMethod);
+                PostWiring -= handler;  // instances can be wired to/from more than once, so only register their PostWiringInitialize once
+                PostWiring += handler;
             }
             /*
             method = B.GetType().GetMethod("PostWiringInitialize", System.Reflection.BindingFlags.NonPublic);
             if (method != null)
             {
                 InitializeDelegate handler = (InitializeDelegate)Delegate.CreateDelegate(typeof(InitializeDelegate), B, method);
-                Initialize += handler;
+                PostWiring += handler;
             }
             */
+
+            var onWiringMethod = A.GetType().GetMethod("OnWiringInitialize", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (onWiringMethod != null)
+            {
+                InitializeDelegate handler = (InitializeDelegate)Delegate.CreateDelegate(typeof(InitializeDelegate), A, onWiringMethod);
+                OnWiring += handler;
+                OnWiringInitialize();
+                OnWiring -= handler; // OnWiringInitialize() is always called after wiring, so we remove the handler to avoid it being invoked again on the next wiring
+            }
+
             return A;
         }
 
@@ -247,9 +259,17 @@ namespace Libraries
             return A;
         }
 
+        /// <summary>
+        /// A method called after application wiring and before runtime execution. Any object used for wiring can implement this method by defining a "void PostWiringInitialize()".
+        /// </summary>
         public static void PostWiringInitialize()
         {
-            Initialize?.Invoke();
+            PostWiring?.Invoke();
+        }
+
+        public static void OnWiringInitialize()
+        {
+            OnWiring?.Invoke();
         }
 
         private static void WriteLine(string output)
@@ -282,7 +302,7 @@ namespace Libraries
 
             var BType = B.GetType();
             var AfieldInfos = A.GetType().GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                .Where(f => (APortName != null || f.Name == APortName) && (!reverse ^ EndsIn_B(f.Name))).ToList(); // find the fields that the name meets all criteria
+                .Where(f => (f.Name == APortName) && (!reverse ^ EndsIn_B(f.Name))).ToList(); // find the fields that the name meets all criteria
 
             foreach (var BimplementedInterface in BType.GetInterfaces()) // consider every interface implemented by B 
             {
