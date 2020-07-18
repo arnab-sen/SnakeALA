@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.IO;
 
-namespace GALADE.Libraries
+namespace Libraries
 {
     public static class Wiring
     {
